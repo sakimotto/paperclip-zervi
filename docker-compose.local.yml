@@ -1,0 +1,54 @@
+# Local sandbox compose for Paperclip Zervi evaluation.
+# Uses port 5433 for Postgres to avoid conflicts with local Postgres on 5432.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: paperclip
+      POSTGRES_PASSWORD: paperclip
+      POSTGRES_DB: paperclip
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperclip -d paperclip"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - paperclip
+
+  paperclip:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "3100:3100"
+    environment:
+      DATABASE_URL: postgres://paperclip:paperclip@db:5432/paperclip
+      PORT: "3100"
+      HOST: "0.0.0.0"
+      SERVE_UI: "true"
+      PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: "private"
+      PAPERCLIP_PUBLIC_URL: "${PAPERCLIP_PUBLIC_URL:-http://localhost:3100}"
+      PAPERCLIP_TELEMETRY_DISABLED: "1"
+      # Local dev defaults only. Production/Elestio uses real secrets injected via Infisical.
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-dev-better-auth-secret-not-for-production}"
+      PAPERCLIP_TOOL_ACTION_SIGNING_SECRET: "${PAPERCLIP_TOOL_ACTION_SIGNING_SECRET:-dev-tool-action-signing-secret-not-for-production}"
+    volumes:
+      - paperclip-data:/paperclip
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - paperclip
+
+volumes:
+  pgdata:
+  paperclip-data:
+
+networks:
+  paperclip:
