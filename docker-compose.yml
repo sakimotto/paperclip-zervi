@@ -18,7 +18,8 @@ services:
   paperclip:
     image: ghcr.io/sakimotto/paperclip-zervi:master
     ports:
-      - "3100:3100"
+      # Elestio rule: bind to 172.17.0.1, never 0.0.0.0
+      - "172.17.0.1:3100:3100"
     environment:
       DATABASE_URL: postgres://paperclip:paperclip@db:5432/paperclip
       PORT: "3100"
